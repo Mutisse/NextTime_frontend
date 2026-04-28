@@ -120,8 +120,11 @@ module.exports = configure(function (/* ctx */) {
       plugins: ["Notify", "Loading", "Dialog", "BottomSheet", "AppVisibility"],
     },
 
-    // Animações
-    animations: "all",
+    // *** CORREÇÃO PRINCIPAL ***
+    // Altere de 'all' para um array vazio.
+    // Isso impede que o Quasar tente carregar centenas de arquivos de animação desnecessários,
+    // o que estava causando a falha no build do Render.
+    animations: [], // <--- ALTERADO DE 'all' PARA []
 
     // Configurações SSR (se não usar, mantém como está)
     ssr: {
