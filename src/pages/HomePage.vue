@@ -199,102 +199,74 @@
 
     <main class="main">
       <div class="container">
-        <!-- FILTROS -->
-        <div class="filters-section">
-          <div class="filters-scroll">
+        <!-- BARRA DE CATEGORIAS COM SCROLL HORIZONTAL -->
+        <div class="categories-filters-section">
+          <div class="categories-filters-scroll">
             <button
-              class="filter-chip"
-              :class="{ active: activeFilter === 'all' }"
-              @click="setActiveFilter('all')"
+              class="category-filter-chip"
+              :class="{ active: selectedCategoryId === null }"
+              @click="clearCategoryFilter"
             >
-              <span class="filter-icon">✨</span>
-              <span class="filter-text">Todos</span>
+              <span class="category-filter-icon">✨</span>
+              <span class="category-filter-text">Todos</span>
             </button>
             <button
-              class="filter-chip"
-              :class="{ active: activeFilter === 'today' }"
-              @click="setActiveFilter('today')"
+              v-for="cat in professionalCategories"
+              :key="cat.id"
+              class="category-filter-chip"
+              :class="{ active: selectedCategoryId === cat.id }"
+              @click="toggleCategory(cat.id)"
             >
-              <span class="filter-icon">📅</span>
-              <span class="filter-text">Hoje</span>
-            </button>
-            <button
-              class="filter-chip"
-              :class="{ active: activeFilter === 'weekend' }"
-              @click="setActiveFilter('weekend')"
-            >
-              <span class="filter-icon">🎉</span>
-              <span class="filter-text">Fim de Semana</span>
-            </button>
-            <button
-              class="filter-chip"
-              :class="{ active: activeFilter === 'free' }"
-              @click="setActiveFilter('free')"
-            >
-              <span class="filter-icon">🎁</span>
-              <span class="filter-text">Grátis</span>
-            </button>
-            <button
-              class="filter-chip"
-              :class="{ active: activeFilter === 'nearby' }"
-              @click="setActiveFilter('nearby')"
-            >
-              <span class="filter-icon">📍</span>
-              <span class="filter-text">Perto de mim</span>
-            </button>
-            <button
-              class="filter-chip"
-              :class="{ active: activeFilter === 'music' }"
-              @click="setActiveFilter('music')"
-            >
-              <span class="filter-icon">🎵</span>
-              <span class="filter-text">Música</span>
-            </button>
-            <button
-              class="filter-chip"
-              :class="{ active: activeFilter === 'sports' }"
-              @click="setActiveFilter('sports')"
-            >
-              <span class="filter-icon">⚽</span>
-              <span class="filter-text">Esportes</span>
-            </button>
-            <button
-              class="filter-chip"
-              :class="{ active: activeFilter === 'art' }"
-              @click="setActiveFilter('art')"
-            >
-              <span class="filter-icon">🎨</span>
-              <span class="filter-text">Arte</span>
+              <span class="category-filter-icon">{{ cat.icon }}</span>
+              <span class="category-filter-text">{{ cat.nome }}</span>
+              <span class="category-filter-count">{{ getFilteredEventCountByCategory(cat.nome) }}</span>
             </button>
           </div>
         </div>
 
-        <!-- SEÇÃO 1: HOJE - BANNER SLIDER -->
-        <section class="section banner-section">
+        <!-- SEÇÃO 1: HOJE / AMANHÃ - BANNER SLIDER COM BOTÕES -->
+        <section class="section banner-section" v-if="filteredEventsByDay.length">
           <div class="section-header">
             <div class="header-left">
               <div class="section-tag">
                 <span class="tag-icon">📅</span>
-                <span>HOJE</span>
+                <span>{{ dayFilter === 'today' ? 'HOJE' : 'AMANHÃ' }}</span>
               </div>
-              <h2 class="section-title">{{ formatCurrentDate() }}</h2>
+              <h2 class="section-title">{{ dayFilter === 'today' ? formatCurrentDate() : formatTomorrowDate() }}</h2>
             </div>
             <div class="header-right">
+              <!-- BOTÕES HOJE E AMANHÃ -->
+              <div class="day-buttons">
+                <button
+                  class="day-btn"
+                  :class="{ active: dayFilter === 'today' }"
+                  @click="setDayFilter('today')"
+                >
+                  📅 Hoje
+                </button>
+                <button
+                  class="day-btn"
+                  :class="{ active: dayFilter === 'tomorrow' }"
+                  @click="setDayFilter('tomorrow')"
+                >
+                  🌅 Amanhã
+                </button>
+              </div>
               <div class="pill-count">
-                <span class="count-number">{{ todayEvents.length }}</span>
+                <span class="count-number">{{ filteredEventsByDay.length }}</span>
                 <span class="count-label">eventos</span>
               </div>
             </div>
           </div>
 
-          <div class="banner-slider-container">
+          <div class="banner-slider-container" v-if="filteredEventsByDay.length">
             <div class="banner-slider" @mouseenter="pauseAutoSlide" @mouseleave="startAutoSlide">
               <div
                 class="banner-track"
                 :style="{ transform: `translateX(-${currentSlide * 100}%)` }"
               >
                 <div
-                  v-for="event in todayEvents"
+                  v-for="event in filteredEventsByDay"
                   :key="event.id"
                   class="banner-slide"
                   @click="goToEvent(event.id)"
@@ -324,21 +296,21 @@
                 </div>
               </div>
 
-              <button class="banner-nav prev" @click="prevSlide">
+              <button class="banner-nav prev" @click="prevSlide" v-if="filteredEventsByDay.length > 1">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M15 18l-6-6 6-6"/>
                 </svg>
               </button>
-              <button class="banner-nav next" @click="nextSlide">
+              <button class="banner-nav next" @click="nextSlide" v-if="filteredEventsByDay.length > 1">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M9 18l6-6-6-6"/>
                 </svg>
               </button>
             </div>
 
-            <div class="banner-dots">
+            <div class="banner-dots" v-if="filteredEventsByDay.length > 1">
               <button
-                v-for="(event, idx) in todayEvents"
+                v-for="(event, idx) in filteredEventsByDay"
                 :key="event.id"
                 class="banner-dot"
                 :class="{ active: currentSlide === idx }"
@@ -348,45 +320,20 @@
               </button>
             </div>
 
-            <div class="banner-timer">
+            <div class="banner-timer" v-if="filteredEventsByDay.length > 1">
               <span class="timer-text">Próximo em {{ timerSeconds }}s</span>
               <div class="timer-bar">
                 <div class="timer-progress" :style="{ width: `${timerProgress}%` }"></div>
               </div>
             </div>
           </div>
-        </section>
-
-        <!-- SEÇÃO 2: EXPLORAR POR CATEGORIA -->
-        <!-- Desktop: sempre visível | Mobile: só aparece via FAB -->
-        <section id="explorar-categorias" class="section categories-section" v-show="showCategories || !isMobile">
-          <div class="categories-header">
-            <h3 class="categories-title">Explorar por categoria</h3>
-            <button class="categories-view-all" @click="goToAllCategories">Ver todas →</button>
-          </div>
-
-          <div class="categories-scroll-container">
-            <div class="categories-scroll-horizontal">
-              <div
-                v-for="cat in professionalCategories"
-                :key="cat.id"
-                class="category-card"
-                :class="{ active: selectedCategoryId === cat.id }"
-                @click="toggleCategory(cat.id)"
-              >
-                <div class="category-card-icon">{{ cat.icon }}</div>
-                <div class="category-card-info">
-                  <span class="category-card-name">{{ cat.nome }}</span>
-                  <span class="category-card-count">{{ cat.count }} eventos</span>
-                </div>
-              </div>
-            </div>
+          <div v-else class="empty-state">
+            <p>Nenhum evento encontrado para {{ dayFilter === 'today' ? 'hoje' : 'amanhã' }} nesta categoria.</p>
           </div>
         </section>
 
-        <!-- SEÇÃO 3: FIM DE SEMANA -->
-        <!-- Desktop: sempre visível | Mobile: só aparece via FAB -->
-        <section id="fim-semana" class="section" v-show="showWeekend || !isMobile">
+        <!-- SEÇÃO 2: FIM DE SEMANA - SCROLL HORIZONTAL -->
+        <section class="section" v-if="filteredWeekendEvents.length">
           <div class="section-header">
             <div class="header-left">
               <div class="section-tag">
@@ -397,41 +344,46 @@
             </div>
             <div class="header-right">
               <div class="pill-count">
-                <span class="count-number">{{ weekendEvents.length }}</span>
+                <span class="count-number">{{ filteredWeekendEvents.length }}</span>
                 <span class="count-label">eventos</span>
               </div>
             </div>
           </div>
 
-          <div class="event-grid">
-            <div v-for="event in weekendEvents" :key="event.id" class="event-card" @click="goToEvent(event.id)">
-              <div class="event-card-media" :style="{ backgroundImage: `url(${event.imagem})` }">
-                <div class="event-date-badge">
-                  <span class="event-day">{{ event.dia }}</span>
-                  <span class="event-month">{{ event.mes }}</span>
-                </div>
-                <div class="event-card-overlay"></div>
-              </div>
-              <div class="event-card-details">
-                <h4>{{ event.titulo }}</h4>
-                <div class="event-meta">
-                  <span class="event-loc">📍 {{ event.localizacao }}</span>
-                  <span class="event-time">🕒 {{ event.horario }}</span>
-                </div>
-                <div class="event-footer">
-                  <div class="event-price" :class="{ free: event.tipo === 'gratuito' }">
-                    {{ event.preco }}
+          <div class="horizontal-scroll weekend-scroll">
+            <div class="weekend-track">
+              <div v-for="event in filteredWeekendEvents" :key="event.id" class="weekend-card" @click="goToEvent(event.id)">
+                <div class="weekend-card-media" :style="{ backgroundImage: `url(${event.imagem})` }">
+                  <div class="event-date-badge">
+                    <span class="event-day">{{ event.dia || getDayFromDate(event.data) }}</span>
+                    <span class="event-month">{{ event.mes || getMonthFromDate(event.data) }}</span>
                   </div>
-                  <div class="event-interest">
-                    <span>❤️</span> {{ event.interessados }}
+                  <div class="weekend-card-overlay"></div>
+                </div>
+                <div class="weekend-card-details">
+                  <h4>{{ event.titulo }}</h4>
+                  <div class="event-meta">
+                    <span class="event-loc">📍 {{ event.localizacao }}</span>
+                    <span class="event-time">🕒 {{ event.horario }}</span>
+                  </div>
+                  <div class="event-footer">
+                    <div class="event-price" :class="{ free: event.tipo === 'gratuito' }">
+                      {{ event.preco }}
+                    </div>
+                    <div class="event-interest">
+                      <span>❤️</span> {{ event.interessados }}
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
         </section>
+        <div v-else-if="selectedCategoryId !== null" class="empty-state-section">
+          <p>Nenhum evento encontrado para o fim de semana nesta categoria.</p>
+        </div>
 
-        <!-- SEÇÃO 4: LUGARES PARA VISITAR -->
+        <!-- SEÇÃO 3: LUGARES PARA VISITAR -->
         <section class="section" v-if="placesToVisit.length">
           <div class="section-header">
             <div class="header-left">
@@ -466,7 +418,7 @@
           </div>
         </section>
 
-        <!-- SEÇÃO 5: ESTABELECIMENTOS PARA ALUGAR -->
+        <!-- SEÇÃO 4: ESTABELECIMENTOS PARA ALUGAR -->
         <section class="section" v-if="rentalPlaces.length">
           <div class="section-header">
             <div class="header-left">
@@ -500,14 +452,14 @@
       </div>
     </main>
 
-    <!-- FLOATING ACTION BUTTON - SÓ APARECE NO MOBILE -->
+    <!-- FLOATING ACTION BUTTON -->
     <div class="fab-container" v-if="isMobile">
       <div class="fab-menu" :class="{ open: fabOpen }">
-        <button class="fab-option" @click="showSectionAndScroll('explorar-categorias')">
-          <span class="fab-option-icon">🎯</span>
-          <span class="fab-option-label">Explorar categorias</span>
+        <button class="fab-option" @click="scrollToTop">
+          <span class="fab-option-icon">⬆️</span>
+          <span class="fab-option-label">Topo</span>
         </button>
-        <button class="fab-option" @click="showSectionAndScroll('fim-semana')">
+        <button class="fab-option" @click="scrollToWeekend">
           <span class="fab-option-icon">🎉</span>
           <span class="fab-option-label">Fim de semana</span>
         </button>
@@ -522,7 +474,7 @@
       </button>
     </div>
 
-    <!-- Mobile Bottom Navigation - SÓ APARECE NO MOBILE -->
+    <!-- Mobile Bottom Navigation -->
     <nav class="mobile-bottom-nav" v-if="isMobile">
       <div class="bottom-nav-item" :class="{ active: $route.path === '/' }" @click="$router.push('/')">
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -566,160 +518,55 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 
 const router = useRouter()
 
-// CONTROLE DE VISIBILIDADE - MOBILE: inicialmente ocultas | DESKTOP: sempre visíveis
-const showCategories = ref(false)
-const showWeekend = ref(false)
+// CONTROLE DE VISIBILIDADE
+const selectedCategoryId = ref(null)
+const dayFilter = ref('today') // 'today' ou 'tomorrow'
 
-// Dados dos Eventos de HOJE
-const todayEvents = ref([
-  {
-    id: 1,
-    titulo: '🎵 Festival de Música Ao Vivo',
-    localizacao: 'Maputo, Marginal',
-    horario: '19:00',
-    imagem: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&h=350&fit=crop',
-    preco: '500 MZN',
-    tipo: 'pago',
-    interessados: 234,
-    status: 'disponivel'
-  },
-  {
-    id: 2,
-    titulo: '🍽️ Feira Gastronômica Internacional',
-    localizacao: 'Matola, Jardim',
-    horario: '12:00',
-    imagem: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&h=350&fit=crop',
-    preco: 'Grátis',
-    tipo: 'gratuito',
-    interessados: 567,
-    status: 'disponivel'
-  },
-  {
-    id: 3,
-    titulo: '📸 Workshop de Fotografia',
-    localizacao: 'Beira, Centro',
-    horario: '14:00',
-    imagem: 'https://images.unsplash.com/photo-1554048612-b6a482bc67e5?w=800&h=350&fit=crop',
-    preco: '300 MZN',
-    tipo: 'pago',
-    interessados: 89,
-    status: 'disponivel'
-  },
-  {
-    id: 4,
-    titulo: '🎷 Noite do Jazz',
-    localizacao: 'Maputo, Baixa',
-    horario: '20:00',
-    imagem: 'https://images.unsplash.com/photo-1511192336575-5a79af67a629?w=800&h=350&fit=crop',
-    preco: '750 MZN',
-    tipo: 'pago',
-    interessados: 178,
-    status: 'disponivel'
-  },
-  {
-    id: 5,
-    titulo: '🧘 Yoga ao Ar Livre',
-    localizacao: 'Nampula, Parque',
-    horario: '06:00',
-    imagem: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=800&h=350&fit=crop',
-    preco: 'Grátis',
-    tipo: 'gratuito',
-    interessados: 312,
-    status: 'disponivel'
-  }
+// Dados dos Eventos do dia (HOJE)
+const todayEventsData = ref([
+  { id: 1, titulo: '🎵 Festival de Música Ao Vivo', localizacao: 'Maputo, Marginal', horario: '19:00', imagem: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&h=350&fit=crop', preco: '500 MZN', tipo: 'pago', interessados: 234, status: 'disponivel', categoria: 'Música', dataEvento: '2024-04-28' },
+  { id: 2, titulo: '🍽️ Feira Gastronômica Internacional', localizacao: 'Matola, Jardim', horario: '12:00', imagem: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&h=350&fit=crop', preco: 'Grátis', tipo: 'gratuito', interessados: 567, status: 'disponivel', categoria: 'Comida e Experiências', dataEvento: '2024-04-28' },
+  { id: 3, titulo: '📸 Workshop de Fotografia', localizacao: 'Beira, Centro', horario: '14:00', imagem: 'https://images.unsplash.com/photo-1554048612-b6a482bc67e5?w=800&h=350&fit=crop', preco: '300 MZN', tipo: 'pago', interessados: 89, status: 'disponivel', categoria: 'Artes e Cultura', dataEvento: '2024-04-28' },
+  { id: 4, titulo: '🎷 Noite do Jazz', localizacao: 'Maputo, Baixa', horario: '20:00', imagem: 'https://images.unsplash.com/photo-1511192336575-5a79af67a629?w=800&h=350&fit=crop', preco: '750 MZN', tipo: 'pago', interessados: 178, status: 'disponivel', categoria: 'Música', dataEvento: '2024-04-28' },
+  { id: 5, titulo: '🧘 Yoga ao Ar Livre', localizacao: 'Nampula, Parque', horario: '06:00', imagem: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=800&h=350&fit=crop', preco: 'Grátis', tipo: 'gratuito', interessados: 312, status: 'disponivel', categoria: 'Esporte e Bem-estar', dataEvento: '2024-04-28' },
+  { id: 12, titulo: '⚽ Torneio de Futebol', localizacao: 'Maputo, Estádio', horario: '15:00', imagem: 'https://images.unsplash.com/photo-1459865264687-607d964c8d01?w=800&h=350&fit=crop', preco: 'Grátis', tipo: 'gratuito', interessados: 890, status: 'disponivel', categoria: 'Esporte e Bem-estar', dataEvento: '2024-04-28' },
+  { id: 13, titulo: '🎨 Exposição de Arte Contemporânea', localizacao: 'Maputo, CCBM', horario: '10:00', imagem: 'https://images.unsplash.com/photo-1531243269054-2ebf6e8ab071?w=800&h=350&fit=crop', preco: '150 MZN', tipo: 'pago', interessados: 234, status: 'disponivel', categoria: 'Artes e Cultura', dataEvento: '2024-04-28' }
+])
+
+// Dados dos Eventos de AMANHÃ
+const tomorrowEventsData = ref([
+  { id: 15, titulo: '🎸 Show de Rock', localizacao: 'Maputo, Arena', horario: '20:00', imagem: 'https://images.unsplash.com/photo-1429962714451-b31b7ffc630d?w=800&h=350&fit=crop', preco: '1000 MZN', tipo: 'pago', interessados: 456, status: 'disponivel', categoria: 'Música', dataEvento: '2024-04-29' },
+  { id: 16, titulo: '🍕 Festival de Pizza', localizacao: 'Matola, Centro', horario: '11:00', imagem: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&h=350&fit=crop', preco: 'Grátis', tipo: 'gratuito', interessados: 789, status: 'disponivel', categoria: 'Comida e Experiências', dataEvento: '2024-04-29' },
+  { id: 17, titulo: '💃 Aula de Dança', localizacao: 'Beira, Academia', horario: '18:00', imagem: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=800&h=350&fit=crop', preco: '250 MZN', tipo: 'pago', interessados: 123, status: 'disponivel', categoria: 'Esporte e Bem-estar', dataEvento: '2024-04-29' },
+  { id: 18, titulo: '🎭 Peça de Teatro', localizacao: 'Maputo, Teatro', horario: '19:30', imagem: 'https://images.unsplash.com/photo-1503095396549-807125b3b90c?w=800&h=350&fit=crop', preco: '500 MZN', tipo: 'pago', interessados: 345, status: 'disponivel', categoria: 'Artes e Cultura', dataEvento: '2024-04-29' }
 ])
 
 // Dados dos Eventos de FIM DE SEMANA
 const weekendEvents = ref([
-  {
-    id: 6,
-    titulo: '🏖️ Festival de Praia',
-    localizacao: 'Maputo, Costa do Sol',
-    horario: '09:00 - 18:00',
-    dia: '28',
-    mes: 'ABR',
-    imagem: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop',
-    preco: '1.000 MZN',
-    tipo: 'pago',
-    interessados: 1256
-  },
-  {
-    id: 7,
-    titulo: '🎨 Exposição de Arte Moderna',
-    localizacao: 'Maputo, Museu',
-    horario: '10:00 - 17:00',
-    dia: '29',
-    mes: 'ABR',
-    imagem: 'https://images.unsplash.com/photo-1531243269054-2ebf6e8ab071?w=400&h=300&fit=crop',
-    preco: '200 MZN',
-    tipo: 'pago',
-    interessados: 345
-  },
-  {
-    id: 8,
-    titulo: '🏃 Corrida Beneficente',
-    localizacao: 'Matola, Estádio',
-    horario: '07:00 - 11:00',
-    dia: '30',
-    mes: 'ABR',
-    imagem: 'https://images.unsplash.com/photo-1537380008651-e0b42f049c7f?w=400&h=300&fit=crop',
-    preco: 'Grátis',
-    tipo: 'gratuito',
-    interessados: 789
-  },
-  {
-    id: 9,
-    titulo: '🎭 Show de Comédia Stand-up',
-    localizacao: 'Beira, Teatro',
-    horario: '20:00 - 22:00',
-    dia: '28',
-    mes: 'ABR',
-    imagem: 'https://images.unsplash.com/photo-1527224857830-43a7acc85260?w=400&h=300&fit=crop',
-    preco: '400 MZN',
-    tipo: 'pago',
-    interessados: 456
-  },
-  {
-    id: 10,
-    titulo: '🎧 Festa Eletrônica',
-    localizacao: 'Nampula, Clube',
-    horario: '22:00 - 04:00',
-    dia: '29',
-    mes: 'ABR',
-    imagem: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=300&fit=crop',
-    preco: '600 MZN',
-    tipo: 'pago',
-    interessados: 2345
-  },
-  {
-    id: 11,
-    titulo: '🪭 Feira de Artesanato',
-    localizacao: 'Maputo, Centro',
-    horario: '09:00 - 18:00',
-    dia: '30',
-    mes: 'ABR',
-    imagem: 'https://images.unsplash.com/photo-1553681430-cc8d5601b7d0?w=400&h=300&fit=crop',
-    preco: 'Grátis',
-    tipo: 'gratuito',
-    interessados: 678
-  }
+  { id: 6, titulo: '🏖️ Festival de Praia', localizacao: 'Maputo, Costa do Sol', horario: '09:00 - 18:00', data: '2024-04-28', dia: '28', mes: 'ABR', imagem: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop', preco: '1.000 MZN', tipo: 'pago', interessados: 1256, categoria: 'Feriados e Festivais' },
+  { id: 7, titulo: '🎨 Exposição de Arte Moderna', localizacao: 'Maputo, Museu', horario: '10:00 - 17:00', data: '2024-04-29', dia: '29', mes: 'ABR', imagem: 'https://images.unsplash.com/photo-1531243269054-2ebf6e8ab071?w=400&h=300&fit=crop', preco: '200 MZN', tipo: 'pago', interessados: 345, categoria: 'Artes e Cultura' },
+  { id: 8, titulo: '🏃 Corrida Beneficente', localizacao: 'Matola, Estádio', horario: '07:00 - 11:00', data: '2024-04-30', dia: '30', mes: 'ABR', imagem: 'https://images.unsplash.com/photo-1537380008651-e0b42f049c7f?w=400&h=300&fit=crop', preco: 'Grátis', tipo: 'gratuito', interessados: 789, categoria: 'Esporte e Bem-estar' },
+  { id: 9, titulo: '🎭 Show de Comédia Stand-up', localizacao: 'Beira, Teatro', horario: '20:00 - 22:00', data: '2024-04-28', dia: '28', mes: 'ABR', imagem: 'https://images.unsplash.com/photo-1527224857830-43a7acc85260?w=400&h=300&fit=crop', preco: '400 MZN', tipo: 'pago', interessados: 456, categoria: 'Encontros Sociais' },
+  { id: 10, titulo: '🎧 Festa Eletrônica', localizacao: 'Nampula, Clube', horario: '22:00 - 04:00', data: '2024-04-29', dia: '29', mes: 'ABR', imagem: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=300&fit=crop', preco: '600 MZN', tipo: 'pago', interessados: 2345, categoria: 'Vida Noturna' },
+  { id: 11, titulo: '🪭 Feira de Artesanato', localizacao: 'Maputo, Centro', horario: '09:00 - 18:00', data: '2024-04-30', dia: '30', mes: 'ABR', imagem: 'https://images.unsplash.com/photo-1553681430-cc8d5601b7d0?w=400&h=300&fit=crop', preco: 'Grátis', tipo: 'gratuito', interessados: 678, categoria: 'Comida e Experiências' },
+  { id: 14, titulo: '🎵 Concerto Sinfônico', localizacao: 'Maputo, Teatro', horario: '19:00', data: '2024-04-28', dia: '28', mes: 'ABR', imagem: 'https://images.unsplash.com/photo-1507838153413-b4b8e384fca1?w=400&h=300&fit=crop', preco: '800 MZN', tipo: 'pago', interessados: 543, categoria: 'Música' }
 ])
 
 // Categorias
 const professionalCategories = ref([
-  { id: 1, nome: 'Música', icon: '🎵', count: 24 },
-  { id: 2, nome: 'Vida Noturna', icon: '🌙', count: 18 },
-  { id: 3, nome: 'Artes e Cultura', icon: '🎨', count: 15 },
-  { id: 4, nome: 'Feriados e Festivais', icon: '🎪', count: 12 },
-  { id: 5, nome: 'Encontros Sociais', icon: '👥', count: 20 },
-  { id: 6, nome: 'Esporte e Bem-estar', icon: '🏃', count: 14 },
-  { id: 7, nome: 'Negócios e Educação', icon: '💼', count: 10 },
-  { id: 8, nome: 'Comida e Experiências', icon: '🍽️', count: 16 }
+  { id: 1, nome: 'Música', icon: '🎵', count: 0 },
+  { id: 2, nome: 'Vida Noturna', icon: '🌙', count: 0 },
+  { id: 3, nome: 'Artes e Cultura', icon: '🎨', count: 0 },
+  { id: 4, nome: 'Feriados e Festivais', icon: '🎪', count: 0 },
+  { id: 5, nome: 'Encontros Sociais', icon: '👥', count: 0 },
+  { id: 6, nome: 'Esporte e Bem-estar', icon: '🏃', count: 0 },
+  { id: 7, nome: 'Negócios e Educação', icon: '💼', count: 0 },
+  { id: 8, nome: 'Comida e Experiências', icon: '🍽️', count: 0 }
 ])
 
 // Lugares para visitar
@@ -737,8 +584,7 @@ const rentalPlaces = ref([
   { id: 3, nome: 'Beira Event Center', tipo: 'Centro', localizacao: 'Beira', imagem: 'https://images.unsplash.com/photo-1540575467063-3c2b5b5a3f3f?w=400&h=300&fit=crop', capacidade: '1000 pessoas', preco: '25.000 MZN' }
 ])
 
-// Estado
-const selectedCategoryId = ref(null)
+// Estado geral
 const currentUser = ref({})
 const isScrolled = ref(false)
 const isMobile = ref(window.innerWidth < 768)
@@ -749,7 +595,6 @@ const searchInput = ref(null)
 const recentSearches = ref([])
 const showNotifications = ref(false)
 const showUserMenu = ref(false)
-const activeFilter = ref('all')
 const fabOpen = ref(false)
 const unreadCount = ref(3)
 const pendingMatches = ref(2)
@@ -777,46 +622,91 @@ const searchSuggestions = computed(() => {
 
 const popularCategories = ['Música', 'Esportes', 'Arte', 'Gastronomia', 'Festas']
 
-// FUNÇÃO: Mostrar seção e scrollar até ela (apenas para MOBILE)
-const showSectionAndScroll = (sectionId) => {
-  fabOpen.value = false
-
-  if (sectionId === 'explorar-categorias') {
-    showCategories.value = true
-    setTimeout(() => {
-      const element = document.getElementById('explorar-categorias')
-      if (element) {
-        const headerOffset = 80
-        const elementPosition = element.getBoundingClientRect().top
-        const offsetPosition = elementPosition + window.pageYOffset - headerOffset
-        window.scrollTo({
-          top: offsetPosition,
-          behavior: 'smooth'
-        })
-      }
-    }, 100)
-    showToast('🎯 Explorar por categoria')
-  } else if (sectionId === 'fim-semana') {
-    showWeekend.value = true
-    setTimeout(() => {
-      const element = document.getElementById('fim-semana')
-      if (element) {
-        const headerOffset = 80
-        const elementPosition = element.getBoundingClientRect().top
-        const offsetPosition = elementPosition + window.pageYOffset - headerOffset
-        window.scrollTo({
-          top: offsetPosition,
-          behavior: 'smooth'
-        })
-      }
-    }, 100)
-    showToast('🎉 Fim de semana')
+// Funções de filtro por categoria E por dia (HOJE/AMANHÃ)
+const filterEventsByCategoryAndDay = () => {
+  let events = []
+  if (dayFilter.value === 'today') {
+    events = [...todayEventsData.value]
+  } else {
+    events = [...tomorrowEventsData.value]
   }
+
+  if (selectedCategoryId.value === null) return events
+
+  const selectedCat = professionalCategories.value.find(c => c.id === selectedCategoryId.value)
+  if (!selectedCat) return events
+
+  return events.filter(event => event.categoria === selectedCat.nome)
+}
+
+const filteredEventsByDay = computed(() => {
+  return filterEventsByCategoryAndDay()
+})
+
+const filterEventsByCategory = (events) => {
+  if (selectedCategoryId.value === null) return [...events]
+
+  const selectedCat = professionalCategories.value.find(c => c.id === selectedCategoryId.value)
+  if (!selectedCat) return [...events]
+
+  return events.filter(event => event.categoria === selectedCat.nome)
+}
+
+const filteredWeekendEvents = computed(() => {
+  return filterEventsByCategory(weekendEvents.value)
+})
+
+const updateCategoryCounts = () => {
+  const allEvents = [...todayEventsData.value, ...tomorrowEventsData.value, ...weekendEvents.value]
+  professionalCategories.value.forEach(cat => {
+    cat.count = allEvents.filter(event => event.categoria === cat.nome).length
+  })
+}
+
+const getFilteredEventCountByCategory = (categoryName) => {
+  const allEvents = [...todayEventsData.value, ...tomorrowEventsData.value, ...weekendEvents.value]
+  return allEvents.filter(event => event.categoria === categoryName).length
+}
+
+// Funções de UI
+const setDayFilter = (filter) => {
+  dayFilter.value = filter
+  currentSlide.value = 0
+  showToast(filter === 'today' ? '📅 Mostrando eventos de hoje' : '🌅 Mostrando eventos de amanhã')
+}
+
+const formatTomorrowDate = () => {
+  const tomorrow = new Date()
+  tomorrow.setDate(tomorrow.getDate() + 1)
+  return tomorrow.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' })
+}
+
+const scrollToTop = () => {
+  fabOpen.value = false
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+  showToast('⬆️ Voltar ao topo')
+}
+
+const scrollToWeekend = () => {
+  fabOpen.value = false
+  const weekendSection = document.querySelector('.weekend-scroll')
+  if (weekendSection) {
+    const headerOffset = 80
+    const elementPosition = weekendSection.getBoundingClientRect().top
+    const offsetPosition = elementPosition + window.pageYOffset - headerOffset
+    window.scrollTo({ top: offsetPosition, behavior: 'smooth' })
+  }
+  showToast('🎉 Fim de semana')
+}
+
+const clearCategoryFilter = () => {
+  selectedCategoryId.value = null
+  showToast('✨ Todos os eventos')
 }
 
 // Slider functions
 const nextSlide = () => {
-  if (currentSlide.value < todayEvents.value.length - 1) {
+  if (currentSlide.value < filteredEventsByDay.value.length - 1) {
     currentSlide.value++
   } else {
     currentSlide.value = 0
@@ -828,7 +718,7 @@ const prevSlide = () => {
   if (currentSlide.value > 0) {
     currentSlide.value--
   } else {
-    currentSlide.value = todayEvents.value.length - 1
+    currentSlide.value = filteredEventsByDay.value.length - 1
   }
   resetTimer()
 }
@@ -843,7 +733,7 @@ const startAutoSlide = () => {
   isPaused.value = false
   startCountdown()
   autoSlideInterval.value = setInterval(() => {
-    if (!isPaused.value) {
+    if (!isPaused.value && filteredEventsByDay.value.length > 1) {
       nextSlide()
     }
   }, 61000)
@@ -888,23 +778,35 @@ const resetTimer = () => {
   }
 }
 
+watch(filteredEventsByDay, (newEvents) => {
+  if (currentSlide.value >= newEvents.length) {
+    currentSlide.value = 0
+  }
+})
+
 // Funções gerais
 const formatCurrentDate = () => {
   const today = new Date();
   return today.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
 };
 
+const getDayFromDate = (dateStr) => {
+  if (!dateStr) return '00'
+  const date = new Date(dateStr)
+  return date.getDate().toString().padStart(2, '0')
+}
+
+const getMonthFromDate = (dateStr) => {
+  if (!dateStr) return 'MÊS'
+  const date = new Date(dateStr)
+  return date.toLocaleDateString('pt-BR', { month: 'short' }).toUpperCase().slice(0, 3)
+}
+
 const showToast = (message) => {
   toastMessage.value = message
   setTimeout(() => {
     toastMessage.value = ''
   }, 3000)
-}
-
-const setActiveFilter = (filter) => {
-  activeFilter.value = filter
-  selectedCategoryId.value = null
-  showToast(`Filtrando: ${filter}`)
 }
 
 const focusSearch = () => {
@@ -976,8 +878,8 @@ const toggleCategory = (catId) => {
     selectedCategoryId.value = catId;
     const category = professionalCategories.value.find(c => c.id === catId)
     showToast(`${category.nome} selecionada`)
-    activeFilter.value = 'all'
   }
+  currentSlide.value = 0
 };
 
 const toggleFabMenu = () => {
@@ -993,7 +895,6 @@ const goToPlace = (id) => router.push(`/place/${id}`);
 const goToRental = (id) => router.push(`/rental/${id}`);
 const goToPlaces = () => router.push('/places');
 const goToRentals = () => router.push('/rentals');
-const goToAllCategories = () => router.push('/categories');
 
 const goToProfile = () => {
   showUserMenu.value = false
@@ -1043,11 +944,6 @@ const handleScroll = () => {
 
 const handleResize = () => {
   isMobile.value = window.innerWidth < 768;
-  // Quando muda para desktop, as seções ficam visíveis automaticamente
-  if (!isMobile.value) {
-    showCategories.value = true
-    showWeekend.value = true
-  }
 };
 
 const handleClickOutside = (event) => {
@@ -1085,12 +981,7 @@ onMounted(async () => {
     currentUser.value = { nome: 'Usuário', email: 'usuario@email.com' };
   }
 
-  // Se for desktop, mostrar todas as seções
-  if (!isMobile.value) {
-    showCategories.value = true
-    showWeekend.value = true
-  }
-
+  updateCategoryCounts()
   startAutoSlide()
 
   window.addEventListener("scroll", handleScroll);
@@ -1554,15 +1445,17 @@ onUnmounted(() => {
   color: #94a3b8;
 }
 
-/* Filters */
-.filters-section {
+/* BARRA DE CATEGORIAS */
+.categories-filters-section {
   margin: 1rem 0 1.5rem 0;
   position: sticky;
   top: 70px;
   z-index: 90;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  padding: 0.5rem 0;
 }
 
-.filters-scroll {
+.categories-filters-scroll {
   display: flex;
   gap: 0.75rem;
   overflow-x: auto;
@@ -1570,11 +1463,11 @@ onUnmounted(() => {
   scrollbar-width: none;
 }
 
-.filters-scroll::-webkit-scrollbar {
+.categories-filters-scroll::-webkit-scrollbar {
   display: none;
 }
 
-.filter-chip {
+.category-filter-chip {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -1591,16 +1484,74 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 
-.filter-chip:hover {
+.category-filter-chip:hover {
   background: #f8fafc;
   transform: translateY(-1px);
   border-color: #6366f1;
 }
 
-.filter-chip.active {
+.category-filter-chip.active {
   background: #6366f1;
   border-color: #6366f1;
   color: white;
+}
+
+.category-filter-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 1rem;
+  padding: 0.1rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  margin-left: 0.25rem;
+}
+
+.category-filter-chip.active .category-filter-count {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+}
+
+/* Day Buttons */
+.day-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.day-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.4rem 0.8rem;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 2rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.day-btn:hover {
+  background: #e2e8f0;
+  transform: translateY(-1px);
+}
+
+.day-btn.active {
+  background: #6366f1;
+  border-color: #6366f1;
+  color: white;
+}
+
+/* Empty States */
+.empty-state, .empty-state-section {
+  text-align: center;
+  padding: 3rem;
+  background: white;
+  border-radius: 1rem;
+  color: #64748b;
 }
 
 /* Banner Slider */
@@ -1915,130 +1866,7 @@ onUnmounted(() => {
   color: #475569;
 }
 
-/* Categories */
-.categories-section {
-  margin: 2rem 0;
-}
-
-.categories-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1.5rem;
-}
-
-.categories-title {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.categories-view-all {
-  background: none;
-  border: none;
-  color: #6366f1;
-  font-size: 0.875rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.categories-scroll-container {
-  width: 100%;
-}
-
-.categories-scroll-horizontal {
-  display: flex;
-  gap: 1rem;
-  overflow-x: auto;
-  padding: 0.5rem 0 1rem 0;
-  scrollbar-width: thin;
-  scrollbar-color: #6366f1 #e2e8f0;
-  scroll-snap-type: x mandatory;
-}
-
-.categories-scroll-horizontal::-webkit-scrollbar {
-  height: 4px;
-}
-
-.categories-scroll-horizontal::-webkit-scrollbar-track {
-  background: #e2e8f0;
-  border-radius: 4px;
-}
-
-.categories-scroll-horizontal::-webkit-scrollbar-thumb {
-  background: #6366f1;
-  border-radius: 4px;
-}
-
-.categories-scroll-horizontal .category-card {
-  flex-shrink: 0;
-  width: calc(50% - 0.5rem);
-  min-width: 160px;
-  scroll-snap-align: start;
-}
-
-.category-card {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  padding: 1rem;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 1rem;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.category-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  border-color: #6366f1;
-}
-
-.category-card.active {
-  background: #6366f1;
-  border-color: #6366f1;
-}
-
-.category-card.active .category-card-icon {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.category-card.active .category-card-name {
-  color: white;
-}
-
-.category-card.active .category-card-count {
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.category-card-icon {
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #f1f5f9;
-  border-radius: 1rem;
-  font-size: 1.5rem;
-  transition: all 0.3s ease;
-}
-
-.category-card-name {
-  display: block;
-  font-size: 1rem;
-  font-weight: 600;
-  color: #0f172a;
-  margin-bottom: 0.25rem;
-}
-
-.category-card-count {
-  display: block;
-  font-size: 0.75rem;
-  color: #64748b;
-}
-
-/* Horizontal Scroll */
+/* Scroll Horizontal para eventos de fim de semana */
 .horizontal-scroll {
   overflow-x: auto;
   padding-bottom: 1rem;
@@ -2059,42 +1887,58 @@ onUnmounted(() => {
   border-radius: 4px;
 }
 
-.scroll-track, .place-track, .rental-track {
+.weekend-scroll {
+  overflow-x: auto;
+  padding-bottom: 1rem;
+  scrollbar-width: thin;
+}
+
+.weekend-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+
+.weekend-scroll::-webkit-scrollbar-track {
+  background: #e2e8f0;
+  border-radius: 4px;
+}
+
+.weekend-scroll::-webkit-scrollbar-thumb {
+  background: #6366f1;
+  border-radius: 4px;
+}
+
+.weekend-track {
   display: flex;
   gap: 1rem;
   width: fit-content;
 }
 
-/* Event Grid */
-.event-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1.5rem;
-}
-
-.event-card {
+/* Weekend Card */
+.weekend-card {
   background: white;
   border-radius: 1rem;
+  width: 260px;
+  flex-shrink: 0;
   overflow: hidden;
-  cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
   border: 1px solid #e2e8f0;
+  cursor: pointer;
 }
 
-.event-card:hover {
+.weekend-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
-.event-card-media {
+.weekend-card-media {
   height: 160px;
   background-size: cover;
   background-position: center;
   position: relative;
 }
 
-.event-card-overlay {
+.weekend-card-overlay {
   position: absolute;
   top: 0;
   left: 0;
@@ -2112,6 +1956,7 @@ onUnmounted(() => {
   padding: 0.25rem 0.5rem;
   text-align: center;
   min-width: 50px;
+  z-index: 2;
 }
 
 .event-day {
@@ -2130,12 +1975,12 @@ onUnmounted(() => {
   color: #475569;
 }
 
-.event-card-details {
-  padding: 1rem;
+.weekend-card-details {
+  padding: 0.75rem;
 }
 
-.event-card-details h4 {
-  font-size: 1rem;
+.weekend-card-details h4 {
+  font-size: 0.875rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
   white-space: nowrap;
@@ -2148,11 +1993,11 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.5rem;
 }
 
 .event-loc, .event-time {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: #475569;
   display: flex;
   align-items: center;
@@ -2167,7 +2012,7 @@ onUnmounted(() => {
 
 .event-price {
   font-weight: 700;
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   color: #6366f1;
 }
 
@@ -2179,7 +2024,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   gap: 0.25rem;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   color: #ef4444;
 }
 
@@ -2356,7 +2201,14 @@ onUnmounted(() => {
   transform: scale(0.98);
 }
 
-/* FAB - APENAS MOBILE */
+/* Place Track */
+.place-track, .rental-track {
+  display: flex;
+  gap: 1rem;
+  width: fit-content;
+}
+
+/* FAB */
 .fab-container {
   position: fixed;
   bottom: 80px;
@@ -2451,7 +2303,7 @@ onUnmounted(() => {
   transform: rotate(0deg);
 }
 
-/* Mobile Bottom Nav - APENAS MOBILE */
+/* Mobile Bottom Nav */
 .mobile-bottom-nav {
   position: fixed;
   bottom: 0;
@@ -2526,25 +2378,12 @@ onUnmounted(() => {
 
 /* Desktop */
 @media (min-width: 769px) {
-  .categories-scroll-horizontal {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 1rem;
-    overflow-x: visible;
-    padding: 0;
-  }
-
-  .categories-scroll-horizontal .category-card {
-    width: calc(25% - 0.75rem);
-    min-width: auto;
-  }
-
-  .event-grid {
-    grid-template-columns: repeat(3, 1fr);
-  }
-
   .banner-image {
     height: 220px;
+  }
+
+  .weekend-card {
+    width: 280px;
   }
 }
 
@@ -2554,11 +2393,11 @@ onUnmounted(() => {
     padding: 0 1rem;
   }
 
-  .filters-section {
+  .categories-filters-section {
     top: 60px;
   }
 
-  .filter-chip {
+  .category-filter-chip {
     padding: 0.5rem 1rem;
     font-size: 0.75rem;
   }
@@ -2589,11 +2428,6 @@ onUnmounted(() => {
     max-height: 70vh;
   }
 
-  .event-grid {
-    grid-template-columns: 1fr;
-    gap: 1rem;
-  }
-
   .main {
     margin-bottom: 70px;
   }
@@ -2620,11 +2454,31 @@ onUnmounted(() => {
   .timer-text {
     font-size: 0.55rem;
   }
+
+  .weekend-card {
+    width: 240px;
+  }
+
+  .section-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .header-right {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .day-btn {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.7rem;
+  }
 }
 
 @media (min-width: 768px) and (max-width: 1024px) {
-  .event-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .weekend-card {
+    width: 260px;
   }
 }
 </style>
