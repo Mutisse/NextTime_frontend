@@ -1,0 +1,49 @@
+name: Deploy Laravel Application
+
+on:
+  push:
+    branches:
+      - main  # Define a branch que aciona o deploy
+      - master
+
+jobs:
+  deploy:
+    name: Deploy to VPS
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'  # Altere conforme a versão do PHP no seu servidor
+        extensions: mbstring, xml, bcmath, curl, gd
+        ini-values: post_max_size=256M, max_execution_time=300
+
+    - name: Install Composer dependencies
+      run: composer install --no-progress --no-suggest --prefer-dist --optimize-autoloader --no-dev
+
+    - name: Upload .env file
+      run: scp .env root@65.21.165.110:/var/www/laravel-klc/
+
+    - name: Run deployment script on VPS
+      run: |
+        ssh root@65.21.165.110 << 'EOF'
+          cd /var/www/laravel-klc
+          git pull origin main
+          composer install --no-dev --prefer-dist --optimize-autoloader
+          php artisan migrate --force
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+          sudo chown -R www-data:www-data /var/www/laravel-klc  # Ajusta permissões para Nginx
+          sudo systemctl reload nginx  # Reinicia Nginx
+        EOF
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+
+    - name: Clear Laravel cache
+      run: |
+        ssh root@65.21.165.110 'php /var/www/laravel-klc/artisan config:clear && php /var/www/laravel-klc/artisan cache:clear && php /var/www/laravel-klc/artisan route:clear'
