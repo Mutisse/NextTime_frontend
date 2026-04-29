@@ -224,49 +224,45 @@
           </div>
         </div>
 
-        <!-- SEÇÃO 1: HOJE / AMANHÃ - BANNER SLIDER COM BOTÕES -->
-        <section class="section banner-section" v-if="filteredEventsByDay.length">
+        <!-- BANNER SLIDER - Apenas a data (sem texto HOJE) -->
+        <section class="section banner-section" v-if="filteredSponsoredEvents.length">
           <div class="section-header">
             <div class="header-left">
-              <div class="section-tag">
-                <span class="tag-icon">📅</span>
-                <span>{{ dayFilter === 'today' ? 'HOJE' : 'AMANHÃ' }}</span>
-              </div>
-              <h2 class="section-title">{{ dayFilter === 'today' ? formatCurrentDate() : formatTomorrowDate() }}</h2>
+              <h2 class="section-title banner-date">{{ formatCurrentDate() }}</h2>
             </div>
             <div class="header-right">
-              <!-- BOTÕES HOJE E AMANHÃ -->
+              <!-- BOTÕES PATROCINADAS E ANÚNCIOS -->
               <div class="day-buttons">
                 <button
                   class="day-btn"
-                  :class="{ active: dayFilter === 'today' }"
-                  @click="setDayFilter('today')"
+                  :class="{ active: sponsoredFilter === 'sponsored' }"
+                  @click="setSponsoredFilter('sponsored')"
                 >
-                  📅 Hoje
+                  ⭐ Patrocinadas
                 </button>
                 <button
                   class="day-btn"
-                  :class="{ active: dayFilter === 'tomorrow' }"
-                  @click="setDayFilter('tomorrow')"
+                  :class="{ active: sponsoredFilter === 'ads' }"
+                  @click="setSponsoredFilter('ads')"
                 >
-                  🌅 Amanhã
+                  📢 Anúncios
                 </button>
               </div>
               <div class="pill-count">
-                <span class="count-number">{{ filteredEventsByDay.length }}</span>
+                <span class="count-number">{{ filteredSponsoredEvents.length }}</span>
                 <span class="count-label">eventos</span>
               </div>
             </div>
           </div>
 
-          <div class="banner-slider-container" v-if="filteredEventsByDay.length">
+          <div class="banner-slider-container" v-if="filteredSponsoredEvents.length">
             <div class="banner-slider" @mouseenter="pauseAutoSlide" @mouseleave="startAutoSlide">
               <div
                 class="banner-track"
                 :style="{ transform: `translateX(-${currentSlide * 100}%)` }"
               >
                 <div
-                  v-for="event in filteredEventsByDay"
+                  v-for="event in filteredSponsoredEvents"
                   :key="event.id"
                   class="banner-slide"
                   @click="goToEvent(event.id)"
@@ -277,6 +273,8 @@
                       <div class="banner-badge">
                         <span class="banner-time">🕒 {{ event.horario }}</span>
                         <span class="banner-status" :class="event.status">{{ event.status }}</span>
+                        <span class="banner-sponsored" v-if="event.isSponsored">⭐ Patrocinado</span>
+                        <span class="banner-ads" v-if="event.isAd">📢 Anúncio</span>
                       </div>
                       <div class="banner-info">
                         <h3 class="banner-title">{{ event.titulo }}</h3>
@@ -296,21 +294,21 @@
                 </div>
               </div>
 
-              <button class="banner-nav prev" @click="prevSlide" v-if="filteredEventsByDay.length > 1">
+              <button class="banner-nav prev" @click="prevSlide" v-if="filteredSponsoredEvents.length > 1">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M15 18l-6-6 6-6"/>
                 </svg>
               </button>
-              <button class="banner-nav next" @click="nextSlide" v-if="filteredEventsByDay.length > 1">
+              <button class="banner-nav next" @click="nextSlide" v-if="filteredSponsoredEvents.length > 1">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                   <path d="M9 18l6-6-6-6"/>
                 </svg>
               </button>
             </div>
 
-            <div class="banner-dots" v-if="filteredEventsByDay.length > 1">
+            <div class="banner-dots" v-if="filteredSponsoredEvents.length > 1">
               <button
-                v-for="(event, idx) in filteredEventsByDay"
+                v-for="(event, idx) in filteredSponsoredEvents"
                 :key="event.id"
                 class="banner-dot"
                 :class="{ active: currentSlide === idx }"
@@ -320,7 +318,7 @@
               </button>
             </div>
 
-            <div class="banner-timer" v-if="filteredEventsByDay.length > 1">
+            <div class="banner-timer" v-if="filteredSponsoredEvents.length > 1">
               <span class="timer-text">Próximo em {{ timerSeconds }}s</span>
               <div class="timer-bar">
                 <div class="timer-progress" :style="{ width: `${timerProgress}%` }"></div>
@@ -328,11 +326,107 @@
             </div>
           </div>
           <div v-else class="empty-state">
-            <p>Nenhum evento encontrado para {{ dayFilter === 'today' ? 'hoje' : 'amanhã' }} nesta categoria.</p>
+            <p>Nenhum {{ sponsoredFilter === 'sponsored' ? 'evento patrocinado' : 'anúncio' }} encontrado.</p>
           </div>
         </section>
 
-        <!-- SEÇÃO 2: FIM DE SEMANA - SCROLL HORIZONTAL -->
+        <!-- SEÇÃO 1: HOJE (Eventos do dia atual) -->
+        <section class="section" v-if="filteredTodayEvents.length">
+          <div class="section-header">
+            <div class="header-left">
+              <div class="section-tag">
+                <span class="tag-icon">📅</span>
+                <span>HOJE</span>
+              </div>
+              <h2 class="section-title">{{ formatCurrentDate() }}</h2>
+            </div>
+            <div class="header-right">
+              <div class="pill-count">
+                <span class="count-number">{{ filteredTodayEvents.length }}</span>
+                <span class="count-label">eventos</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="horizontal-scroll today-scroll">
+            <div class="today-track">
+              <div v-for="event in filteredTodayEvents" :key="event.id" class="event-card" @click="goToEvent(event.id)">
+                <div class="event-card-media" :style="{ backgroundImage: `url(${event.imagem})` }">
+                  <div class="event-date-badge">
+                    <span class="event-day">{{ event.dia || getDayFromDate(event.dataEvento) }}</span>
+                    <span class="event-month">{{ event.mes || getMonthFromDate(event.dataEvento) }}</span>
+                  </div>
+                  <div class="event-card-overlay"></div>
+                </div>
+                <div class="event-card-details">
+                  <h4>{{ event.titulo }}</h4>
+                  <div class="event-meta">
+                    <span class="event-loc">📍 {{ event.localizacao }}</span>
+                    <span class="event-time">🕒 {{ event.horario }}</span>
+                  </div>
+                  <div class="event-footer">
+                    <div class="event-price" :class="{ free: event.tipo === 'gratuito' }">
+                      {{ event.preco }}
+                    </div>
+                    <div class="event-interest">
+                      <span>❤️</span> {{ event.interessados }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SEÇÃO 2: AMANHÃ (Eventos do dia seguinte) -->
+        <section class="section" v-if="filteredTomorrowEvents.length">
+          <div class="section-header">
+            <div class="header-left">
+              <div class="section-tag">
+                <span class="tag-icon">🌅</span>
+                <span>AMANHÃ</span>
+              </div>
+              <h2 class="section-title">{{ formatTomorrowDate() }}</h2>
+            </div>
+            <div class="header-right">
+              <div class="pill-count">
+                <span class="count-number">{{ filteredTomorrowEvents.length }}</span>
+                <span class="count-label">eventos</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="horizontal-scroll tomorrow-scroll">
+            <div class="tomorrow-track">
+              <div v-for="event in filteredTomorrowEvents" :key="event.id" class="event-card" @click="goToEvent(event.id)">
+                <div class="event-card-media" :style="{ backgroundImage: `url(${event.imagem})` }">
+                  <div class="event-date-badge">
+                    <span class="event-day">{{ event.dia || getDayFromDate(event.dataEvento) }}</span>
+                    <span class="event-month">{{ event.mes || getMonthFromDate(event.dataEvento) }}</span>
+                  </div>
+                  <div class="event-card-overlay"></div>
+                </div>
+                <div class="event-card-details">
+                  <h4>{{ event.titulo }}</h4>
+                  <div class="event-meta">
+                    <span class="event-loc">📍 {{ event.localizacao }}</span>
+                    <span class="event-time">🕒 {{ event.horario }}</span>
+                  </div>
+                  <div class="event-footer">
+                    <div class="event-price" :class="{ free: event.tipo === 'gratuito' }">
+                      {{ event.preco }}
+                    </div>
+                    <div class="event-interest">
+                      <span>❤️</span> {{ event.interessados }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SEÇÃO 3: FIM DE SEMANA -->
         <section class="section" v-if="filteredWeekendEvents.length">
           <div class="section-header">
             <div class="header-left">
@@ -352,15 +446,15 @@
 
           <div class="horizontal-scroll weekend-scroll">
             <div class="weekend-track">
-              <div v-for="event in filteredWeekendEvents" :key="event.id" class="weekend-card" @click="goToEvent(event.id)">
-                <div class="weekend-card-media" :style="{ backgroundImage: `url(${event.imagem})` }">
+              <div v-for="event in filteredWeekendEvents" :key="event.id" class="event-card" @click="goToEvent(event.id)">
+                <div class="event-card-media" :style="{ backgroundImage: `url(${event.imagem})` }">
                   <div class="event-date-badge">
                     <span class="event-day">{{ event.dia || getDayFromDate(event.data) }}</span>
                     <span class="event-month">{{ event.mes || getMonthFromDate(event.data) }}</span>
                   </div>
-                  <div class="weekend-card-overlay"></div>
+                  <div class="event-card-overlay"></div>
                 </div>
-                <div class="weekend-card-details">
+                <div class="event-card-details">
                   <h4>{{ event.titulo }}</h4>
                   <div class="event-meta">
                     <span class="event-loc">📍 {{ event.localizacao }}</span>
@@ -374,76 +468,6 @@
                       <span>❤️</span> {{ event.interessados }}
                     </div>
                   </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-        <div v-else-if="selectedCategoryId !== null" class="empty-state-section">
-          <p>Nenhum evento encontrado para o fim de semana nesta categoria.</p>
-        </div>
-
-        <!-- SEÇÃO 3: LUGARES PARA VISITAR -->
-        <section class="section" v-if="placesToVisit.length">
-          <div class="section-header">
-            <div class="header-left">
-              <div class="section-tag">
-                <span class="tag-icon">📍</span>
-                <span>LUGARES</span>
-              </div>
-              <h2 class="section-title">Para visitar</h2>
-            </div>
-            <button class="view-all-btn" @click="goToPlaces">Ver todos →</button>
-          </div>
-          <div class="horizontal-scroll">
-            <div class="place-track">
-              <div v-for="place in placesToVisit" :key="place.id" class="place-card" @click="goToPlace(place.id)">
-                <div class="place-image" :style="{ backgroundImage: `url(${place.imagem})` }">
-                  <div class="place-overlay">
-                    <div class="place-date-badge">{{ place.horario }}</div>
-                  </div>
-                </div>
-                <div class="place-info">
-                  <h4>{{ place.nome }}</h4>
-                  <p>{{ place.tipo }} • {{ place.localizacao }}</p>
-                  <div class="place-rating">
-                    <div class="stars">
-                      <span v-for="i in 5" :key="i" :class="{ filled: i <= Math.floor(place.rating) }">★</span>
-                    </div>
-                    <span class="rating-value">{{ place.rating }}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <!-- SEÇÃO 4: ESTABELECIMENTOS PARA ALUGAR -->
-        <section class="section" v-if="rentalPlaces.length">
-          <div class="section-header">
-            <div class="header-left">
-              <div class="section-tag">
-                <span class="tag-icon">🏢</span>
-                <span>ALUGUER</span>
-              </div>
-              <h2 class="section-title">Quintas e espaços</h2>
-            </div>
-            <button class="view-all-btn" @click="goToRentals">Ver todos →</button>
-          </div>
-          <div class="horizontal-scroll">
-            <div class="rental-track">
-              <div v-for="place in rentalPlaces" :key="place.id" class="rental-card" @click="goToRental(place.id)">
-                <div class="rental-image" :style="{ backgroundImage: `url(${place.imagem})` }">
-                  <div class="rental-price-tag">
-                    <span class="price-label">💰</span>
-                    <span class="price-value">{{ place.preco }}</span>
-                  </div>
-                  <div class="rental-overlay"></div>
-                </div>
-                <div class="rental-info">
-                  <h4>{{ place.nome }}</h4>
-                  <p>{{ place.tipo }} • {{ place.capacidade }}</p>
-                  <button class="btn-rental">Ver disponibilidade</button>
                 </div>
               </div>
             </div>
@@ -525,36 +549,46 @@ const router = useRouter()
 
 // CONTROLE DE VISIBILIDADE
 const selectedCategoryId = ref(null)
-const dayFilter = ref('today') // 'today' ou 'tomorrow'
+const sponsoredFilter = ref('sponsored') // 'sponsored' ou 'ads'
 
-// Dados dos Eventos do dia (HOJE)
+// Dados dos Eventos PATROCINADOS (para o banner)
+const sponsoredEventsData = ref([
+  { id: 1, titulo: '🎵 Festival de Música Ao Vivo', localizacao: 'Maputo, Marginal', horario: '19:00', imagem: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&h=350&fit=crop', preco: '500 MZN', tipo: 'pago', interessados: 234, status: 'disponivel', categoria: 'Música', isSponsored: true, isAd: false },
+  { id: 2, titulo: '🍽️ Feira Gastronômica Internacional', localizacao: 'Matola, Jardim', horario: '12:00', imagem: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&h=350&fit=crop', preco: 'Grátis', tipo: 'gratuito', interessados: 567, status: 'disponivel', categoria: 'Comida e Experiências', isSponsored: true, isAd: false },
+  { id: 3, titulo: '📸 Workshop de Fotografia', localizacao: 'Beira, Centro', horario: '14:00', imagem: 'https://images.unsplash.com/photo-1554048612-b6a482bc67e5?w=800&h=350&fit=crop', preco: '300 MZN', tipo: 'pago', interessados: 89, status: 'disponivel', categoria: 'Artes e Cultura', isSponsored: true, isAd: false }
+])
+
+// Dados dos Eventos de ANÚNCIOS (para o banner)
+const adsEventsData = ref([
+  { id: 101, titulo: '🏪 Super Oferta - 50% Desconto', localizacao: 'Maputo, Shopping', horario: '10:00 - 22:00', imagem: 'https://images.unsplash.com/photo-1567446537708-ac4aa75c9c28?w=800&h=350&fit=crop', preco: 'Promoção', tipo: 'gratuito', interessados: 1200, status: 'disponivel', categoria: 'Promoções', isSponsored: false, isAd: true },
+  { id: 102, titulo: '📱 Lançamento Galaxy S24', localizacao: 'Matola, Loja Oficial', horario: '09:00 - 20:00', imagem: 'https://images.unsplash.com/photo-1616348436168-de43ad0db179?w=800&h=350&fit=crop', preco: 'Grátis', tipo: 'gratuito', interessados: 890, status: 'disponivel', categoria: 'Tecnologia', isSponsored: false, isAd: true },
+  { id: 103, titulo: '✈️ Passagens Aéreas com 30% OFF', localizacao: 'Online', horario: '24h', imagem: 'https://images.unsplash.com/photo-1436491865332-7a61a109cc05?w=800&h=350&fit=crop', preco: 'Promoção', tipo: 'pago', interessados: 3400, status: 'disponivel', categoria: 'Viagens', isSponsored: false, isAd: true }
+])
+
+// Dados dos Eventos de HOJE
 const todayEventsData = ref([
-  { id: 1, titulo: '🎵 Festival de Música Ao Vivo', localizacao: 'Maputo, Marginal', horario: '19:00', imagem: 'https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=800&h=350&fit=crop', preco: '500 MZN', tipo: 'pago', interessados: 234, status: 'disponivel', categoria: 'Música', dataEvento: '2024-04-28' },
-  { id: 2, titulo: '🍽️ Feira Gastronômica Internacional', localizacao: 'Matola, Jardim', horario: '12:00', imagem: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?w=800&h=350&fit=crop', preco: 'Grátis', tipo: 'gratuito', interessados: 567, status: 'disponivel', categoria: 'Comida e Experiências', dataEvento: '2024-04-28' },
-  { id: 3, titulo: '📸 Workshop de Fotografia', localizacao: 'Beira, Centro', horario: '14:00', imagem: 'https://images.unsplash.com/photo-1554048612-b6a482bc67e5?w=800&h=350&fit=crop', preco: '300 MZN', tipo: 'pago', interessados: 89, status: 'disponivel', categoria: 'Artes e Cultura', dataEvento: '2024-04-28' },
-  { id: 4, titulo: '🎷 Noite do Jazz', localizacao: 'Maputo, Baixa', horario: '20:00', imagem: 'https://images.unsplash.com/photo-1511192336575-5a79af67a629?w=800&h=350&fit=crop', preco: '750 MZN', tipo: 'pago', interessados: 178, status: 'disponivel', categoria: 'Música', dataEvento: '2024-04-28' },
-  { id: 5, titulo: '🧘 Yoga ao Ar Livre', localizacao: 'Nampula, Parque', horario: '06:00', imagem: 'https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=800&h=350&fit=crop', preco: 'Grátis', tipo: 'gratuito', interessados: 312, status: 'disponivel', categoria: 'Esporte e Bem-estar', dataEvento: '2024-04-28' },
-  { id: 12, titulo: '⚽ Torneio de Futebol', localizacao: 'Maputo, Estádio', horario: '15:00', imagem: 'https://images.unsplash.com/photo-1459865264687-607d964c8d01?w=800&h=350&fit=crop', preco: 'Grátis', tipo: 'gratuito', interessados: 890, status: 'disponivel', categoria: 'Esporte e Bem-estar', dataEvento: '2024-04-28' },
-  { id: 13, titulo: '🎨 Exposição de Arte Contemporânea', localizacao: 'Maputo, CCBM', horario: '10:00', imagem: 'https://images.unsplash.com/photo-1531243269054-2ebf6e8ab071?w=800&h=350&fit=crop', preco: '150 MZN', tipo: 'pago', interessados: 234, status: 'disponivel', categoria: 'Artes e Cultura', dataEvento: '2024-04-28' }
+  { id: 201, titulo: '🏖️ Festival de Praia', localizacao: 'Maputo, Costa do Sol', horario: '09:00 - 18:00', dataEvento: '2024-04-29', dia: '29', mes: 'ABR', imagem: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop', preco: '1.000 MZN', tipo: 'pago', interessados: 1256, categoria: 'Feriados e Festivais' },
+  { id: 202, titulo: '🎨 Exposição de Arte Moderna', localizacao: 'Maputo, Museu', horario: '10:00 - 17:00', dataEvento: '2024-04-29', dia: '29', mes: 'ABR', imagem: 'https://images.unsplash.com/photo-1531243269054-2ebf6e8ab071?w=400&h=300&fit=crop', preco: '200 MZN', tipo: 'pago', interessados: 345, categoria: 'Artes e Cultura' },
+  { id: 203, titulo: '🎭 Show de Comédia Stand-up', localizacao: 'Beira, Teatro', horario: '20:00 - 22:00', dataEvento: '2024-04-29', dia: '29', mes: 'ABR', imagem: 'https://images.unsplash.com/photo-1527224857830-43a7acc85260?w=400&h=300&fit=crop', preco: '400 MZN', tipo: 'pago', interessados: 456, categoria: 'Encontros Sociais' },
+  { id: 204, titulo: '🎵 Concerto Sinfônico', localizacao: 'Maputo, Teatro', horario: '19:00', dataEvento: '2024-04-29', dia: '29', mes: 'ABR', imagem: 'https://images.unsplash.com/photo-1507838153413-b4b8e384fca1?w=400&h=300&fit=crop', preco: '800 MZN', tipo: 'pago', interessados: 543, categoria: 'Música' }
 ])
 
 // Dados dos Eventos de AMANHÃ
 const tomorrowEventsData = ref([
-  { id: 15, titulo: '🎸 Show de Rock', localizacao: 'Maputo, Arena', horario: '20:00', imagem: 'https://images.unsplash.com/photo-1429962714451-b31b7ffc630d?w=800&h=350&fit=crop', preco: '1000 MZN', tipo: 'pago', interessados: 456, status: 'disponivel', categoria: 'Música', dataEvento: '2024-04-29' },
-  { id: 16, titulo: '🍕 Festival de Pizza', localizacao: 'Matola, Centro', horario: '11:00', imagem: 'https://images.unsplash.com/photo-1513104890138-7c749659a591?w=800&h=350&fit=crop', preco: 'Grátis', tipo: 'gratuito', interessados: 789, status: 'disponivel', categoria: 'Comida e Experiências', dataEvento: '2024-04-29' },
-  { id: 17, titulo: '💃 Aula de Dança', localizacao: 'Beira, Academia', horario: '18:00', imagem: 'https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?w=800&h=350&fit=crop', preco: '250 MZN', tipo: 'pago', interessados: 123, status: 'disponivel', categoria: 'Esporte e Bem-estar', dataEvento: '2024-04-29' },
-  { id: 18, titulo: '🎭 Peça de Teatro', localizacao: 'Maputo, Teatro', horario: '19:30', imagem: 'https://images.unsplash.com/photo-1503095396549-807125b3b90c?w=800&h=350&fit=crop', preco: '500 MZN', tipo: 'pago', interessados: 345, status: 'disponivel', categoria: 'Artes e Cultura', dataEvento: '2024-04-29' }
+  { id: 301, titulo: '🏃 Corrida Beneficente', localizacao: 'Matola, Estádio', horario: '07:00 - 11:00', dataEvento: '2024-04-30', dia: '30', mes: 'ABR', imagem: 'https://images.unsplash.com/photo-1537380008651-e0b42f049c7f?w=400&h=300&fit=crop', preco: 'Grátis', tipo: 'gratuito', interessados: 789, categoria: 'Esporte e Bem-estar' },
+  { id: 302, titulo: '🎧 Festa Eletrônica', localizacao: 'Nampula, Clube', horario: '22:00 - 04:00', dataEvento: '2024-04-30', dia: '30', mes: 'ABR', imagem: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=300&fit=crop', preco: '600 MZN', tipo: 'pago', interessados: 2345, categoria: 'Vida Noturna' },
+  { id: 303, titulo: '🪭 Feira de Artesanato', localizacao: 'Maputo, Centro', horario: '09:00 - 18:00', dataEvento: '2024-04-30', dia: '30', mes: 'ABR', imagem: 'https://images.unsplash.com/photo-1553681430-cc8d5601b7d0?w=400&h=300&fit=crop', preco: 'Grátis', tipo: 'gratuito', interessados: 678, categoria: 'Comida e Experiências' }
 ])
 
 // Dados dos Eventos de FIM DE SEMANA
-const weekendEvents = ref([
-  { id: 6, titulo: '🏖️ Festival de Praia', localizacao: 'Maputo, Costa do Sol', horario: '09:00 - 18:00', data: '2024-04-28', dia: '28', mes: 'ABR', imagem: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop', preco: '1.000 MZN', tipo: 'pago', interessados: 1256, categoria: 'Feriados e Festivais' },
-  { id: 7, titulo: '🎨 Exposição de Arte Moderna', localizacao: 'Maputo, Museu', horario: '10:00 - 17:00', data: '2024-04-29', dia: '29', mes: 'ABR', imagem: 'https://images.unsplash.com/photo-1531243269054-2ebf6e8ab071?w=400&h=300&fit=crop', preco: '200 MZN', tipo: 'pago', interessados: 345, categoria: 'Artes e Cultura' },
-  { id: 8, titulo: '🏃 Corrida Beneficente', localizacao: 'Matola, Estádio', horario: '07:00 - 11:00', data: '2024-04-30', dia: '30', mes: 'ABR', imagem: 'https://images.unsplash.com/photo-1537380008651-e0b42f049c7f?w=400&h=300&fit=crop', preco: 'Grátis', tipo: 'gratuito', interessados: 789, categoria: 'Esporte e Bem-estar' },
-  { id: 9, titulo: '🎭 Show de Comédia Stand-up', localizacao: 'Beira, Teatro', horario: '20:00 - 22:00', data: '2024-04-28', dia: '28', mes: 'ABR', imagem: 'https://images.unsplash.com/photo-1527224857830-43a7acc85260?w=400&h=300&fit=crop', preco: '400 MZN', tipo: 'pago', interessados: 456, categoria: 'Encontros Sociais' },
-  { id: 10, titulo: '🎧 Festa Eletrônica', localizacao: 'Nampula, Clube', horario: '22:00 - 04:00', data: '2024-04-29', dia: '29', mes: 'ABR', imagem: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=300&fit=crop', preco: '600 MZN', tipo: 'pago', interessados: 2345, categoria: 'Vida Noturna' },
-  { id: 11, titulo: '🪭 Feira de Artesanato', localizacao: 'Maputo, Centro', horario: '09:00 - 18:00', data: '2024-04-30', dia: '30', mes: 'ABR', imagem: 'https://images.unsplash.com/photo-1553681430-cc8d5601b7d0?w=400&h=300&fit=crop', preco: 'Grátis', tipo: 'gratuito', interessados: 678, categoria: 'Comida e Experiências' },
-  { id: 14, titulo: '🎵 Concerto Sinfônico', localizacao: 'Maputo, Teatro', horario: '19:00', data: '2024-04-28', dia: '28', mes: 'ABR', imagem: 'https://images.unsplash.com/photo-1507838153413-b4b8e384fca1?w=400&h=300&fit=crop', preco: '800 MZN', tipo: 'pago', interessados: 543, categoria: 'Música' }
+const weekendEventsData = ref([
+  { id: 401, titulo: '🏖️ Festival de Praia', localizacao: 'Maputo, Costa do Sol', horario: '09:00 - 18:00', data: '2024-05-04', dia: '04', mes: 'MAI', imagem: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop', preco: '1.000 MZN', tipo: 'pago', interessados: 1256, categoria: 'Feriados e Festivais' },
+  { id: 402, titulo: '🎨 Exposição de Arte Moderna', localizacao: 'Maputo, Museu', horario: '10:00 - 17:00', data: '2024-05-05', dia: '05', mes: 'MAI', imagem: 'https://images.unsplash.com/photo-1531243269054-2ebf6e8ab071?w=400&h=300&fit=crop', preco: '200 MZN', tipo: 'pago', interessados: 345, categoria: 'Artes e Cultura' },
+  { id: 403, titulo: '🏃 Corrida Beneficente', localizacao: 'Matola, Estádio', horario: '07:00 - 11:00', data: '2024-05-04', dia: '04', mes: 'MAI', imagem: 'https://images.unsplash.com/photo-1537380008651-e0b42f049c7f?w=400&h=300&fit=crop', preco: 'Grátis', tipo: 'gratuito', interessados: 789, categoria: 'Esporte e Bem-estar' },
+  { id: 404, titulo: '🎭 Show de Comédia Stand-up', localizacao: 'Beira, Teatro', horario: '20:00 - 22:00', data: '2024-05-05', dia: '05', mes: 'MAI', imagem: 'https://images.unsplash.com/photo-1527224857830-43a7acc85260?w=400&h=300&fit=crop', preco: '400 MZN', tipo: 'pago', interessados: 456, categoria: 'Encontros Sociais' },
+  { id: 405, titulo: '🎧 Festa Eletrônica', localizacao: 'Nampula, Clube', horario: '22:00 - 04:00', data: '2024-05-04', dia: '04', mes: 'MAI', imagem: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&h=300&fit=crop', preco: '600 MZN', tipo: 'pago', interessados: 2345, categoria: 'Vida Noturna' },
+  { id: 406, titulo: '🪭 Feira de Artesanato', localizacao: 'Maputo, Centro', horario: '09:00 - 18:00', data: '2024-05-05', dia: '05', mes: 'MAI', imagem: 'https://images.unsplash.com/photo-1553681430-cc8d5601b7d0?w=400&h=300&fit=crop', preco: 'Grátis', tipo: 'gratuito', interessados: 678, categoria: 'Comida e Experiências' },
+  { id: 407, titulo: '🎵 Concerto Sinfônico', localizacao: 'Maputo, Teatro', horario: '19:00', data: '2024-05-04', dia: '04', mes: 'MAI', imagem: 'https://images.unsplash.com/photo-1507838153413-b4b8e384fca1?w=400&h=300&fit=crop', preco: '800 MZN', tipo: 'pago', interessados: 543, categoria: 'Música' }
 ])
 
 // Categorias
@@ -567,21 +601,6 @@ const professionalCategories = ref([
   { id: 6, nome: 'Esporte e Bem-estar', icon: '🏃', count: 0 },
   { id: 7, nome: 'Negócios e Educação', icon: '💼', count: 0 },
   { id: 8, nome: 'Comida e Experiências', icon: '🍽️', count: 0 }
-])
-
-// Lugares para visitar
-const placesToVisit = ref([
-  { id: 1, nome: 'Coconuts Lounge', tipo: 'Rooftop', localizacao: 'Maputo', imagem: 'https://images.unsplash.com/photo-1516450360452-9312f5e86fc7?w=400&h=300&fit=crop', horario: '12h - 02h', rating: 4.8 },
-  { id: 2, nome: 'Espaço Cultural Franco', tipo: 'Galeria', localizacao: 'Maputo', imagem: 'https://images.unsplash.com/photo-1566121933407-7b3b4d8b7f4f?w=400&h=300&fit=crop', horario: '10h - 18h', rating: 4.5 },
-  { id: 3, nome: 'Sunset Bar', tipo: 'Bar', localizacao: 'Beira', imagem: 'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=400&h=300&fit=crop', horario: '16h - 23h', rating: 4.7 },
-  { id: 4, nome: 'Mercado Municipal', tipo: 'Mercado', localizacao: 'Matola', imagem: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400&h=300&fit=crop', horario: '08h - 17h', rating: 4.3 }
-])
-
-// Lugares para alugar
-const rentalPlaces = ref([
-  { id: 1, nome: 'Quinta das Palmeiras', tipo: 'Quinta', localizacao: 'Maputo', imagem: 'https://images.unsplash.com/photo-1464366400600-7168b4af2df8?w=400&h=300&fit=crop', capacidade: '500 pessoas', preco: '15.000 MZN' },
-  { id: 2, nome: 'Villa Luana', tipo: 'Salão', localizacao: 'Matola', imagem: 'https://images.unsplash.com/photo-1519167758481-83f550bb49b3?w=400&h=300&fit=crop', capacidade: '200 pessoas', preco: '8.000 MZN' },
-  { id: 3, nome: 'Beira Event Center', tipo: 'Centro', localizacao: 'Beira', imagem: 'https://images.unsplash.com/photo-1540575467063-3c2b5b5a3f3f?w=400&h=300&fit=crop', capacidade: '1000 pessoas', preco: '25.000 MZN' }
 ])
 
 // Estado geral
@@ -622,57 +641,52 @@ const searchSuggestions = computed(() => {
 
 const popularCategories = ['Música', 'Esportes', 'Arte', 'Gastronomia', 'Festas']
 
-// Funções de filtro por categoria E por dia (HOJE/AMANHÃ)
-const filterEventsByCategoryAndDay = () => {
-  let events = []
-  if (dayFilter.value === 'today') {
-    events = [...todayEventsData.value]
-  } else {
-    events = [...tomorrowEventsData.value]
-  }
-
-  if (selectedCategoryId.value === null) return events
-
-  const selectedCat = professionalCategories.value.find(c => c.id === selectedCategoryId.value)
-  if (!selectedCat) return events
-
-  return events.filter(event => event.categoria === selectedCat.nome)
-}
-
-const filteredEventsByDay = computed(() => {
-  return filterEventsByCategoryAndDay()
-})
-
+// Funções de filtro
 const filterEventsByCategory = (events) => {
   if (selectedCategoryId.value === null) return [...events]
-
   const selectedCat = professionalCategories.value.find(c => c.id === selectedCategoryId.value)
   if (!selectedCat) return [...events]
-
   return events.filter(event => event.categoria === selectedCat.nome)
 }
 
+// Eventos filtrados para cada seção
+const filteredSponsoredEvents = computed(() => {
+  if (sponsoredFilter.value === 'sponsored') {
+    return filterEventsByCategory(sponsoredEventsData.value)
+  } else {
+    return filterEventsByCategory(adsEventsData.value)
+  }
+})
+
+const filteredTodayEvents = computed(() => {
+  return filterEventsByCategory(todayEventsData.value)
+})
+
+const filteredTomorrowEvents = computed(() => {
+  return filterEventsByCategory(tomorrowEventsData.value)
+})
+
 const filteredWeekendEvents = computed(() => {
-  return filterEventsByCategory(weekendEvents.value)
+  return filterEventsByCategory(weekendEventsData.value)
 })
 
 const updateCategoryCounts = () => {
-  const allEvents = [...todayEventsData.value, ...tomorrowEventsData.value, ...weekendEvents.value]
+  const allEvents = [...todayEventsData.value, ...tomorrowEventsData.value, ...weekendEventsData.value]
   professionalCategories.value.forEach(cat => {
     cat.count = allEvents.filter(event => event.categoria === cat.nome).length
   })
 }
 
 const getFilteredEventCountByCategory = (categoryName) => {
-  const allEvents = [...todayEventsData.value, ...tomorrowEventsData.value, ...weekendEvents.value]
+  const allEvents = [...todayEventsData.value, ...tomorrowEventsData.value, ...weekendEventsData.value]
   return allEvents.filter(event => event.categoria === categoryName).length
 }
 
 // Funções de UI
-const setDayFilter = (filter) => {
-  dayFilter.value = filter
+const setSponsoredFilter = (filter) => {
+  sponsoredFilter.value = filter
   currentSlide.value = 0
-  showToast(filter === 'today' ? '📅 Mostrando eventos de hoje' : '🌅 Mostrando eventos de amanhã')
+  showToast(filter === 'sponsored' ? '⭐ Mostrando eventos patrocinados' : '📢 Mostrando anúncios')
 }
 
 const formatTomorrowDate = () => {
@@ -689,7 +703,7 @@ const scrollToTop = () => {
 
 const scrollToWeekend = () => {
   fabOpen.value = false
-  const weekendSection = document.querySelector('.weekend-scroll')
+  const weekendSection = document.querySelector('.weekend-scroll')?.closest('.section')
   if (weekendSection) {
     const headerOffset = 80
     const elementPosition = weekendSection.getBoundingClientRect().top
@@ -706,7 +720,7 @@ const clearCategoryFilter = () => {
 
 // Slider functions
 const nextSlide = () => {
-  if (currentSlide.value < filteredEventsByDay.value.length - 1) {
+  if (currentSlide.value < filteredSponsoredEvents.value.length - 1) {
     currentSlide.value++
   } else {
     currentSlide.value = 0
@@ -718,7 +732,7 @@ const prevSlide = () => {
   if (currentSlide.value > 0) {
     currentSlide.value--
   } else {
-    currentSlide.value = filteredEventsByDay.value.length - 1
+    currentSlide.value = filteredSponsoredEvents.value.length - 1
   }
   resetTimer()
 }
@@ -733,7 +747,7 @@ const startAutoSlide = () => {
   isPaused.value = false
   startCountdown()
   autoSlideInterval.value = setInterval(() => {
-    if (!isPaused.value && filteredEventsByDay.value.length > 1) {
+    if (!isPaused.value && filteredSponsoredEvents.value.length > 1) {
       nextSlide()
     }
   }, 61000)
@@ -778,7 +792,7 @@ const resetTimer = () => {
   }
 }
 
-watch(filteredEventsByDay, (newEvents) => {
+watch(filteredSponsoredEvents, (newEvents) => {
   if (currentSlide.value >= newEvents.length) {
     currentSlide.value = 0
   }
@@ -890,11 +904,6 @@ const goToEvent = (id) => {
   router.push(`/event/${id}`)
   showToast(`Abrindo evento ${id}`)
 };
-
-const goToPlace = (id) => router.push(`/place/${id}`);
-const goToRental = (id) => router.push(`/rental/${id}`);
-const goToPlaces = () => router.push('/places');
-const goToRentals = () => router.push('/rentals');
 
 const goToProfile = () => {
   showUserMenu.value = false
@@ -1513,6 +1522,13 @@ onUnmounted(() => {
   color: white;
 }
 
+/* Banner Date */
+.banner-date {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
 /* Day Buttons */
 .day-buttons {
   display: flex;
@@ -1542,6 +1558,33 @@ onUnmounted(() => {
 .day-btn.active {
   background: #6366f1;
   border-color: #6366f1;
+  color: white;
+}
+
+/* Sponsored and Ads Badges */
+.banner-sponsored {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.6rem;
+  background: #f59e0b;
+  backdrop-filter: blur(4px);
+  border-radius: 2rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: white;
+}
+
+.banner-ads {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.2rem 0.6rem;
+  background: #ef4444;
+  backdrop-filter: blur(4px);
+  border-radius: 2rem;
+  font-size: 0.65rem;
+  font-weight: 600;
   color: white;
 }
 
@@ -1609,8 +1652,9 @@ onUnmounted(() => {
 
 .banner-badge {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.5rem;
   margin-bottom: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .banner-time, .banner-status {
@@ -1866,7 +1910,7 @@ onUnmounted(() => {
   color: #475569;
 }
 
-/* Scroll Horizontal para eventos de fim de semana */
+/* Scroll Horizontal */
 .horizontal-scroll {
   overflow-x: auto;
   padding-bottom: 1rem;
@@ -1887,34 +1931,40 @@ onUnmounted(() => {
   border-radius: 4px;
 }
 
-.weekend-scroll {
+.today-scroll, .tomorrow-scroll, .weekend-scroll {
   overflow-x: auto;
   padding-bottom: 1rem;
   scrollbar-width: thin;
 }
 
+.today-scroll::-webkit-scrollbar,
+.tomorrow-scroll::-webkit-scrollbar,
 .weekend-scroll::-webkit-scrollbar {
   height: 4px;
 }
 
+.today-scroll::-webkit-scrollbar-track,
+.tomorrow-scroll::-webkit-scrollbar-track,
 .weekend-scroll::-webkit-scrollbar-track {
   background: #e2e8f0;
   border-radius: 4px;
 }
 
+.today-scroll::-webkit-scrollbar-thumb,
+.tomorrow-scroll::-webkit-scrollbar-thumb,
 .weekend-scroll::-webkit-scrollbar-thumb {
   background: #6366f1;
   border-radius: 4px;
 }
 
-.weekend-track {
+.today-track, .tomorrow-track, .weekend-track {
   display: flex;
   gap: 1rem;
   width: fit-content;
 }
 
-/* Weekend Card */
-.weekend-card {
+/* Event Card */
+.event-card {
   background: white;
   border-radius: 1rem;
   width: 260px;
@@ -1926,19 +1976,19 @@ onUnmounted(() => {
   cursor: pointer;
 }
 
-.weekend-card:hover {
+.event-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
 }
 
-.weekend-card-media {
+.event-card-media {
   height: 160px;
   background-size: cover;
   background-position: center;
   position: relative;
 }
 
-.weekend-card-overlay {
+.event-card-overlay {
   position: absolute;
   top: 0;
   left: 0;
@@ -1975,11 +2025,11 @@ onUnmounted(() => {
   color: #475569;
 }
 
-.weekend-card-details {
+.event-card-details {
   padding: 0.75rem;
 }
 
-.weekend-card-details h4 {
+.event-card-details h4 {
   font-size: 0.875rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
@@ -2026,186 +2076,6 @@ onUnmounted(() => {
   gap: 0.25rem;
   font-size: 0.7rem;
   color: #ef4444;
-}
-
-/* Place Card */
-.place-card {
-  background: white;
-  border-radius: 1rem;
-  width: 220px;
-  flex-shrink: 0;
-  overflow: hidden;
-  transition: all 0.3s ease;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  cursor: pointer;
-}
-
-.place-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-}
-
-.place-image {
-  height: 140px;
-  background-size: cover;
-  background-position: center;
-  position: relative;
-}
-
-.place-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(to bottom, transparent 70%, rgba(0,0,0,0.4));
-}
-
-.place-date-badge {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(4px);
-  color: white;
-  font-size: 0.7rem;
-  font-weight: 600;
-  padding: 0.2rem 0.5rem;
-  border-radius: 0.5rem;
-}
-
-.place-info {
-  padding: 0.75rem;
-}
-
-.place-info h4 {
-  font-size: 0.875rem;
-  font-weight: 700;
-  margin-bottom: 0.25rem;
-  color: #0f172a;
-}
-
-.place-info p {
-  font-size: 0.7rem;
-  color: #475569;
-}
-
-.place-rating {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
-}
-
-.stars {
-  display: flex;
-  gap: 2px;
-  color: #cbd5e1;
-  font-size: 0.7rem;
-}
-
-.stars .filled {
-  color: #f59e0b;
-}
-
-.rating-value {
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: #0f172a;
-}
-
-/* Rental Card */
-.rental-card {
-  background: white;
-  border-radius: 1rem;
-  width: 260px;
-  flex-shrink: 0;
-  overflow: hidden;
-  transition: all 0.3s ease;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-  cursor: pointer;
-}
-
-.rental-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-}
-
-.rental-image {
-  height: 150px;
-  background-size: cover;
-  background-position: center;
-  position: relative;
-}
-
-.rental-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(to bottom, transparent 60%, rgba(0,0,0,0.5));
-}
-
-.rental-price-tag {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(8px);
-  padding: 0.25rem 0.75rem;
-  border-radius: 2rem;
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-}
-
-.price-value {
-  color: #f59e0b;
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.rental-info {
-  padding: 0.75rem;
-}
-
-.rental-info h4 {
-  font-size: 0.875rem;
-  font-weight: 700;
-  margin-bottom: 0.25rem;
-  color: #0f172a;
-}
-
-.rental-info p {
-  font-size: 0.7rem;
-  color: #475569;
-  margin-bottom: 0.75rem;
-}
-
-.btn-rental {
-  width: 100%;
-  padding: 0.5rem;
-  background: #6366f1;
-  color: white;
-  border: none;
-  border-radius: 2rem;
-  font-size: 0.75rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.btn-rental:hover {
-  background: #4f46e5;
-  transform: scale(0.98);
-}
-
-/* Place Track */
-.place-track, .rental-track {
-  display: flex;
-  gap: 1rem;
-  width: fit-content;
 }
 
 /* FAB */
@@ -2382,7 +2252,7 @@ onUnmounted(() => {
     height: 220px;
   }
 
-  .weekend-card {
+  .event-card {
     width: 280px;
   }
 }
@@ -2455,7 +2325,7 @@ onUnmounted(() => {
     font-size: 0.55rem;
   }
 
-  .weekend-card {
+  .event-card {
     width: 240px;
   }
 
@@ -2477,7 +2347,7 @@ onUnmounted(() => {
 }
 
 @media (min-width: 768px) and (max-width: 1024px) {
-  .weekend-card {
+  .event-card {
     width: 260px;
   }
 }
